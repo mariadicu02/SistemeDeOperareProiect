@@ -11,130 +11,130 @@
 
 #define BUFFSIZE 1024
 
-void printWidthAndHeight(int fisierIntrare, int fisierIesire) {
+void displayWidthAndHeight(int inputFile, int outputFile) {
     uint32_t width;
     uint32_t height;
     char buffer[BUFFSIZE];
-    int rd;
+    int bytesRead;
 
-    if ((rd = read(fisierIntrare, buffer, BUFFSIZE)) != 0) {
+    if ((bytesRead = read(inputFile, buffer, BUFFSIZE)) != 0) {
         width = *(uint32_t *)(buffer + 18);
-        sprintf(buffer, "Latimea este: %d\n", width);
-        write(fisierIesire, buffer, strlen(buffer));
+        sprintf(buffer, "Width: %d\n", width);
+        write(outputFile, buffer, strlen(buffer));
 
         height = *(uint32_t *)(buffer + 22);
-        sprintf(buffer, "Inaltimea este: %d\n", height);
-        write(fisierIesire, buffer, strlen(buffer));
+        sprintf(buffer, "Height: %d\n", height);
+        write(outputFile, buffer, strlen(buffer));
     }
 }
 
-void printFileInfo(int fisierIntrare, int fisierIesire) {
+void displayFileInfo(int inputFile, int outputFile) {
     struct stat fileInfo;
     char buffer[BUFFSIZE];
 
-    if (fstat(fisierIntrare, &fileInfo) == -1) {
-        perror("Eroare la obtinerea informatiilor despre fisier");
+    if (fstat(inputFile, &fileInfo) == -1) {
+        perror("Error obtaining file information");
         exit(EXIT_FAILURE);
     }
 
-    sprintf(buffer, "Dimensiune: %ld\n", fileInfo.st_size);
-    write(fisierIesire, buffer, strlen(buffer));
+    sprintf(buffer, "Size: %ld\n", fileInfo.st_size);
+    write(outputFile, buffer, strlen(buffer));
 
-    sprintf(buffer, "Identificatorul utilizatorului: %d\n", fileInfo.st_uid);
-    write(fisierIesire, buffer, strlen(buffer));
+    sprintf(buffer, "User ID: %d\n", fileInfo.st_uid);
+    write(outputFile, buffer, strlen(buffer));
 
-    sprintf(buffer, "Timpul ultimei modificari: %s\n", ctime(&fileInfo.st_mtime));
-    write(fisierIesire, buffer, strlen(buffer));
+    sprintf(buffer, "Last Modification Time: %s\n", ctime(&fileInfo.st_mtime));
+    write(outputFile, buffer, strlen(buffer));
 
-    sprintf(buffer, "Numarul de legaturi: %ld\n", fileInfo.st_nlink);
-    write(fisierIesire, buffer, strlen(buffer));
+    sprintf(buffer, "Number of Links: %ld\n", fileInfo.st_nlink);
+    write(outputFile, buffer, strlen(buffer));
 }
 
-void printPermission(char *permissionType, mode_t permission, int fisierIesire) {
+void displayPermission(char *permissionType, mode_t permission, int outputFile) {
     char buffer[BUFFSIZE];
 
     sprintf(buffer, "%s: ", permissionType);
-    write(fisierIesire, buffer, strlen(buffer));
+    write(outputFile, buffer, strlen(buffer));
 
     if (permission & S_IRUSR) {
         sprintf(buffer, "R");
-        write(fisierIesire, buffer, strlen(buffer));
+        write(outputFile, buffer, strlen(buffer));
     } else {
         sprintf(buffer, "-");
-        write(fisierIesire, buffer, strlen(buffer));
+        write(outputFile, buffer, strlen(buffer));
     }
 
     if (permission & S_IWUSR) {
         sprintf(buffer, "W");
-        write(fisierIesire, buffer, strlen(buffer));
+        write(outputFile, buffer, strlen(buffer));
     } else {
         sprintf(buffer, "-");
-        write(fisierIesire, buffer, strlen(buffer));
+        write(outputFile, buffer, strlen(buffer));
     }
 
     if (permission & S_IXUSR) {
         sprintf(buffer, "X\n");
-        write(fisierIesire, buffer, strlen(buffer));
+        write(outputFile, buffer, strlen(buffer));
     } else {
         sprintf(buffer, "-\n");
-        write(fisierIesire, buffer, strlen(buffer));
+        write(outputFile, buffer, strlen(buffer));
     }
 }
 
-void printAllPermissions(int fisierIntrare, int fisierIesire) {
+void displayAllPermissions(int inputFile, int outputFile) {
     struct stat filePermission;
 
-    if (fstat(fisierIntrare, &filePermission) == -1) {
-        perror("Eroare la obtinerea informatiilor despre fisier");
+    if (fstat(inputFile, &filePermission) == -1) {
+        perror("Error obtaining file information");
         exit(EXIT_FAILURE);
     }
 
-    printPermission("Drepturi de acces user", (filePermission.st_mode & S_IRWXU), fisierIesire);
-    printPermission("Drepturi de acces grup", (filePermission.st_mode & S_IRWXG), fisierIesire);
-    printPermission("Drepturi de acces pentru altii", filePermission.st_mode, fisierIesire);
+    displayPermission("User Access Rights", (filePermission.st_mode & S_IRWXU), outputFile);
+    displayPermission("Group Access Rights", (filePermission.st_mode & S_IRWXG), outputFile);
+    displayPermission("Others Access Rights", filePermission.st_mode, outputFile);
 }
 
 int main(int argc, char *argv[]) {
-    int fisierIntrare;
-    int fisierIesire;
+    int inputFile;
+    int outputFile;
     char buffer[BUFFSIZE];
 
     if (argc != 2) {
-        perror("Numar de argumente invalid");
+        perror("Invalid number of arguments");
         exit(EXIT_FAILURE);
     }
 
-    if ((fisierIntrare = open(argv[1], O_RDONLY)) < 0) {
-        perror("Nu se poate deschide fisierul de intrare");
+    if ((inputFile = open(argv[1], O_RDONLY)) < 0) {
+        perror("Unable to open input file");
         exit(EXIT_FAILURE);
     }
 
-    if ((fisierIesire = open("statistica.txt", O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU)) < 0) {
-        perror("Nu se poate crea fisierul de iesire");
+    if ((outputFile = open("statistics.txt", O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU)) < 0) {
+        perror("Unable to create output file");
         exit(EXIT_FAILURE);
     }
 
     char aux[100];
     strcpy(aux, argv[1]);
-    char *trunc;
-    trunc = strrchr(aux, '.');
+    char *extension;
+    extension = strrchr(aux, '.');
 
-    if (strcmp(trunc, ".bmp") != 0) {
-        perror("Fisierul nostru nu este de tipul indicat!\nIncarcati alt fisier!");
+    if (strcmp(extension, ".bmp") != 0) {
+        perror("The file is not of the specified type!\nPlease load another file!");
         exit(EXIT_FAILURE);
     }
 
     sprintf(buffer, "File name: %s\n", aux);
-    write(fisierIesire, buffer, strlen(buffer));
+    write(outputFile, buffer, strlen(buffer));
 
-    printWidthAndHeight(fisierIntrare, fisierIesire);
+    displayWidthAndHeight(inputFile, outputFile);
 
-    printFileInfo(fisierIntrare, fisierIesire);
+    displayFileInfo(inputFile, outputFile);
 
-    printAllPermissions(fisierIntrare, fisierIesire);
+    displayAllPermissions(inputFile, outputFile);
 
-    close(fisierIntrare);
-    close(fisierIesire);
+    close(inputFile);
+    close(outputFile);
 
     return 0;
 }
